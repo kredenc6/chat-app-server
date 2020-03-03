@@ -9,32 +9,8 @@ var server = http.createServer(app);
 var PORT = 8889;
 var io = socketIo(server);
 var usersOnline = new ConnectedUsers_1["default"]();
-var emitRoomUsers = function (socket, roomID, toSelf) {
-    var roomIndex;
-    var roomName;
-    if (typeof roomID === "number") {
-        roomIndex = roomID;
-        roomName = usersOnline.rooms[roomID].name;
-    }
-    else {
-        roomIndex = usersOnline.rooms.findIndex(function (room) { return room.name === roomID; });
-        roomName = roomID;
-    }
-    if (roomIndex === -1) {
-        console.warn("Could not find roomIndex by roomID " + roomID + ".");
-        return;
-    }
-    var userData = usersOnline.rooms[roomIndex].users.map(function (_a) {
-        var name = _a.name, isIdle = _a.isIdle;
-        return { name: name, isIdle: isIdle };
-    });
-    if (toSelf)
-        socket.emit("room users", userData);
-    else
-        socket.to(roomName).emit("room users", userData);
-};
 io.on("connection", function (socket) {
-    console.log("Socket: " + socket.id + " connected.");
+    console.log("Socket \"" + socket.id + "\" connected.");
     socket.on("join room", function (_a) {
         var roomName = _a.roomName, userName = _a.userName;
         var userInfo = { socketID: socket.id, name: userName, isIdle: true };
@@ -44,14 +20,11 @@ io.on("connection", function (socket) {
             socket.emit("admin message", { fromUser: "admin", text: userName + "! Welcome to the room " + roomName + "." });
             socket.to(roomName).emit("admin message", { fromUser: "admin", text: "User " + userName + " has joined the room." });
             socket.to(roomName).emit("user activity", { name: userName, isIdle: true });
-            console.log("Socket: \"" + socket.id + "\" with userName: \"" + userName + "\" has joined room \"" + roomName + "\".");
+            console.log("Socket \"" + socket.id + "\" with userName \"" + userName + "\" has joined room \"" + roomName + "\".");
         };
         if (isUserNameFree) {
-            setTimeout(function () {
-                emitRoomUsers(socket, roomName, true);
-            }, 200);
             socket.join(roomName, function () {
-                usersOnline.addUser(roomName, userInfo);
+                usersOnline.addUser(socket, roomName, userInfo);
                 announceUserJoining();
             });
         }
@@ -77,28 +50,18 @@ io.on("connection", function (socket) {
         socket.to(roomName).emit("user activity", { name: name, isIdle: isIdle });
         socket.emit("user activity", { name: name, isIdle: isIdle });
     });
-    // TODO close the room whenever the last user leaves or DCs
     socket.on("leave room", function (roomName) {
         socket.leave(roomName, function (error) {
             if (error) {
                 console.log(error);
                 return;
             }
-            var removeInfo = usersOnline.removeUser(socket.id);
-            if (removeInfo) {
-                socket.emit("user logged out");
-                emitRoomUsers(socket, roomName);
-                socket.to(roomName).emit("admin message", { fromUser: "admin", text: "User " + removeInfo.user.name + " has left the room." });
-                console.log("User: \"" + removeInfo.user.name + "\" has left the room: \"" + roomName + "\".");
-            }
+            usersOnline.userLeaving(socket);
         });
     });
     socket.on("disconnect", function () {
-        var removeInfo = usersOnline.removeUser(socket.id);
-        if (removeInfo) {
-            emitRoomUsers(socket, removeInfo.roomIndex);
-            console.log("User \"" + removeInfo.user.name + "\" has disconnected.");
-        }
+        usersOnline.userLeaving(socket);
+        console.log("   - the user has disconnected.");
     });
 });
 app.get("/", function (req, res) {

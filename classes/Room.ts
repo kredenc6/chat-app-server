@@ -29,4 +29,12 @@ export default class Room {
     }
     else return false;
   }
+
+  emitRoomUsersActivity(socket, toSelf?: boolean) {
+    const userData = this.users.map(({ name, isIdle }) => {
+      return { name, isIdle };
+    });
+    if(toSelf) socket.emit("room users", userData);
+    else socket.to(this.name).emit("room users", userData);
+  };
 };

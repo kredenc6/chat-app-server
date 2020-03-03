@@ -36,7 +36,8 @@ var ConnectedUsers = /** @class */ (function () {
         var foundUser = this.findUser(user.socketID);
         return foundUser.userIndex > -1 ? true : false;
     };
-    ConnectedUsers.prototype.addUser = function (roomName, user) {
+    ConnectedUsers.prototype.addUser = function (socket, roomName, user) {
+        var _this = this;
         if (!this.isUserNameFree(user.name))
             return false;
         var roomIndex = this.findRoom(roomName);
@@ -45,6 +46,9 @@ var ConnectedUsers = /** @class */ (function () {
         }
         this.rooms[roomIndex].addUser(user);
         this.namesInUse.push(user.name);
+        setTimeout(function () {
+            _this.rooms[roomIndex].emitRoomUsersActivity(socket, true);
+        }, 200);
         return true;
     };
     ConnectedUsers.prototype.changeUserActivity = function (user) {
@@ -62,6 +66,26 @@ var ConnectedUsers = /** @class */ (function () {
             return { user: deletedUser_1[0], roomIndex: roomIndex };
         }
         return null;
+    };
+    ConnectedUsers.prototype.userLeaving = function (socket) {
+        var removeInfo = this.removeUser(socket.id);
+        if (removeInfo) {
+            var user = removeInfo.user, roomIndex = removeInfo.roomIndex;
+            var roomName = this.rooms[roomIndex].name;
+            if (!this.rooms[roomIndex].users.length) { // if the room is empty...
+                this.removeRoom(roomIndex); // ...delete it.
+                console.log("User \"" + user.name + "\" has left the room \"" + roomName + "\", and the room was closed.");
+            }
+            else { // message the room about the user leaving
+                this.rooms[roomIndex].emitRoomUsersActivity(socket);
+                socket.to(roomName).emit("admin message", { fromUser: "admin", text: "User " + user.name + " has left the room." });
+                console.log("User \"" + user.name + "\" has left the room \"" + roomName + "\".");
+            }
+            socket.emit("user logged out"); // logout the user on the client
+        }
+    };
+    ConnectedUsers.prototype.removeRoom = function (roomId) {
+        return this.rooms.splice(roomId, 1)[0];
     };
     return ConnectedUsers;
 }());

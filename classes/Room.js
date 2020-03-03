@@ -23,6 +23,17 @@ var Room = /** @class */ (function () {
         else
             return false;
     };
+    Room.prototype.emitRoomUsersActivity = function (socket, toSelf) {
+        var userData = this.users.map(function (_a) {
+            var name = _a.name, isIdle = _a.isIdle;
+            return { name: name, isIdle: isIdle };
+        });
+        if (toSelf)
+            socket.emit("room users", userData);
+        else
+            socket.to(this.name).emit("room users", userData);
+    };
+    ;
     return Room;
 }());
 exports["default"] = Room;

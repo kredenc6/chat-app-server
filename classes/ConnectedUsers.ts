@@ -9,7 +9,7 @@ export default class ConnectedUsers {
   constructor() {
     this.RESERVED_NAMES = ["admin"];
     this.namesInUse = [];
-    this.rooms = []
+    this.rooms = [];
   }
 
   isUserNameFree(userName: string) {
@@ -22,7 +22,7 @@ export default class ConnectedUsers {
     return this.rooms.findIndex(room => room.name === roomName);
   }
 
-  private _addRoom(roomName: string) { // for public it needs to not to allow duplicate names
+  private _addRoom(roomName: string) { // to be public it needs to not to allow duplicate names
     return this.rooms.push(new Room(roomName)) - 1;
   }
   
@@ -44,7 +44,7 @@ export default class ConnectedUsers {
     return foundUser.userIndex > -1 ? true : false;
   }  
   
-  addUser(roomName: string, user: ConnectedUser) {
+  addUser(socket, roomName: string, user: ConnectedUser) {
     if(!this.isUserNameFree(user.name)) return false;
     let roomIndex = this.findRoom(roomName);
     if(roomIndex === -1) {
@@ -52,6 +52,9 @@ export default class ConnectedUsers {
     }
     this.rooms[roomIndex].addUser(user);
     this.namesInUse.push(user.name);
+    setTimeout(() => {
+      this.rooms[roomIndex].emitRoomUsersActivity(socket, true);
+    }, 200);
     return true;
   }
 
@@ -70,5 +73,28 @@ export default class ConnectedUsers {
       return { user: deletedUser[0], roomIndex };
     }
     return null;
+  }
+
+  userLeaving(socket) {
+    const removeInfo = this.removeUser(socket.id);
+    if(removeInfo) {
+      const { user, roomIndex } = removeInfo;
+      const roomName = this.rooms[roomIndex].name;
+  
+      if(!this.rooms[roomIndex].users.length) { // if the room is empty...
+        this.removeRoom(roomIndex) // ...delete it.
+        console.log(`User "${ user.name }" has left the room "${ roomName }", and the room was closed.`);
+      }
+      else { // message the room about the user leaving
+        this.rooms[roomIndex].emitRoomUsersActivity(socket);
+        socket.to(roomName).emit("admin message", { fromUser: "admin", text: `User ${ user.name } has left the room.` });
+        console.log(`User "${ user.name }" has left the room "${ roomName }".`);
+      }
+      socket.emit("user logged out"); // logout the user on the client
+    }
+  }
+
+  removeRoom(roomId: number) {
+    return this.rooms.splice(roomId, 1)[0];
   }
 }
