@@ -7,12 +7,8 @@ import ConnectedUsers from "./classes/ConnectedUsers";
 const app = express();
 const server = http.createServer(app);
 const PORT: number = 8889;
-// const port = process.env.PORT || PORT;
-const port = process.env.PORT;
-if(port === "" || port === null) {
-  console.log("Port not received.");
-  console.log(port);
-}
+let port: string | number = process.env.PORT
+if(port === null || port === "") port = PORT;
 const io = socketIo(server);
 const usersOnline: ConnectedUsers = new ConnectedUsers();
 

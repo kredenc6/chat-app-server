@@ -7,6 +7,9 @@ var ConnectedUsers_1 = require("./classes/ConnectedUsers");
 var app = express();
 var server = http.createServer(app);
 var PORT = 8889;
+var port = process.env.PORT;
+if (port === null || port === "")
+    port = PORT;
 var io = socketIo(server);
 var usersOnline = new ConnectedUsers_1["default"]();
 io.on("connection", function (socket) {
@@ -67,4 +70,4 @@ io.on("connection", function (socket) {
 app.get("/", function (req, res) {
     res.send("Hoya! Ho!");
 });
-server.listen(PORT, function () { return console.log("Server listening on port: " + PORT + "."); });
+server.listen(port, function () { return console.log("Server listening on port: " + port + "."); });
