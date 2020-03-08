@@ -8,7 +8,7 @@ var app = express();
 var server = http.createServer(app);
 var PORT = 8889;
 var port = process.env.PORT;
-if (port === null || port === "")
+if (!port)
     port = PORT;
 var io = socketIo(server);
 var usersOnline = new ConnectedUsers_1["default"]();
@@ -26,7 +26,11 @@ io.on("connection", function (socket) {
             console.log("Socket \"" + socket.id + "\" with userName \"" + userName + "\" has joined room \"" + roomName + "\".");
         };
         if (isUserNameFree) {
-            socket.join(roomName, function () {
+            socket.join(roomName, function (err) {
+                if (err) {
+                    console.dir(err);
+                    return;
+                }
                 usersOnline.addUser(socket, roomName, userInfo);
                 announceUserJoining();
             });

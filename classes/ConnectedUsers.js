@@ -21,8 +21,7 @@ var ConnectedUsers = /** @class */ (function () {
         return this.rooms.push(new Room_1["default"](roomName)) - 1;
     };
     ConnectedUsers.prototype.findUser = function (socketID) {
-        var userIndex = -1;
-        var roomIndex = -1;
+        var userIndex, roomIndex;
         for (var i = 0; i < this.rooms.length; i++) {
             userIndex = this.rooms[i].users.findIndex(function (registeredUser) { return registeredUser.socketID === socketID; });
             if (userIndex > -1) {
@@ -30,6 +29,8 @@ var ConnectedUsers = /** @class */ (function () {
                 break;
             }
         }
+        if (userIndex === -1)
+            return null;
         return { userIndex: userIndex, roomIndex: roomIndex };
     };
     ConnectedUsers.prototype.hasUser = function (user) {

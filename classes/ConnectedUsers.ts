@@ -27,8 +27,8 @@ export default class ConnectedUsers {
   }
   
   findUser(socketID: string) {
-    let userIndex = -1;
-    let roomIndex = -1;
+    let userIndex: number,
+        roomIndex: number;
     for(let i=0; i<this.rooms.length; i++) {
       userIndex = this.rooms[i].users.findIndex(registeredUser => registeredUser.socketID === socketID);
       if(userIndex > -1) {
@@ -36,7 +36,8 @@ export default class ConnectedUsers {
         break;
       }
     }
-    return { userIndex, roomIndex }
+    if(userIndex === -1) return null;
+    return { userIndex, roomIndex };
   }
   
   hasUser(user: ConnectedUser) {
